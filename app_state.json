@@ -1,0 +1,20 @@
+{
+  "last_directory": "C:/temp",
+  "default_directory": "C:/",
+  "window": {
+    "width": 1200,
+    "height": 800,
+    "x": 100,
+    "y": 100
+  },
+  "splitter_position": [350, 850],
+  "settings": {
+    "max_history": 500
+  },
+  "move_history": [
+    {
+      "from": "C:/A/file1.txt",
+      "to": "C:/B/file1.txt"
+    }
+  ]
+}

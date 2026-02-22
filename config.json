@@ -1,0 +1,21 @@
+{
+  "destination_folders": [
+    {
+      "name": "Images",
+      "path": "C:/TEMP/Images",
+      "hotkey": "1"
+    },
+    {
+      "name": "Docs",
+      "path": "C:/TEMP/Docs",
+      "hotkey": "2"
+    },
+    {
+      "name": "Other",
+      "path": "C:/TEMP/other",
+      "hotkey": "3"
+    }
+  ],
+  "deleted_folder": "C:/TEMP/Deleted",
+  "conflict_policy": null
+}

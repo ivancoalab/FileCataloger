@@ -1,0 +1,63 @@
+Crear entorno:
+python -m venv venv
+Activar Entorno:
+venv\Scripts\activate
+Me dió error asi que abri Power Shel y escribi:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+ya dejó activar.
+
+Siguiente:
+pip install PySide6
+
+Script para crear la estructura del poroyecto:
+
+# Crear carpetas y archivos de Core
+New-Item -Path "core/interfaces/file_service.py", "core/interfaces/config_service.py" -ItemType File -Force
+New-Item -Path "core/models/file_metadata.py" -ItemType File -Force
+New-Item -Path "core/models/filesystem_item.py" -ItemType File -Force
+# Crear carpeta y archivo de Application
+New-Item -Path "application/file_explorer.py" -ItemType File -Force
+# Crear carpeta y archivos de Infrastructure
+New-Item -Path "infrastructure/filesystem_service.py", "infrastructure/json_config_service.py" -ItemType File -Force
+# Crear carpeta y archivos de UI
+New-Item -Path "ui/main_window.py", "ui/file_list_model.py" -ItemType File -Force
+# Crear el archivo principal en la raíz
+New-Item -Path "main.py" -ItemType File
+
+
+Siguiente paso, copiar y pegar el codigo.
+
+Despues de la 3ra iteracion esta funcionando bien todo, agregamos nuevas clases para
+la fase 4:
+
+New-Item -Path "core/interfaces/preview_handler.py" -ItemType File -Force
+New-Item -Path "application/preview_manager.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/image_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/text_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/hex_handler.py" -ItemType File -Force
+
+    
+    
+New-Item -Path "infrastructure/preview_handlers/media_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/pdf_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/zip_handler.py" -ItemType File -Force
+
+New-Item -Path "infrastructure/preview/metadata_widget.py" -ItemType File -Force
+
+New-Item -Path "application/file_mover.py" -ItemType File -Force
+New-Item -Path "application/move_history.py" -ItemType File -Force
+New-Item -Path "infrastructure/config_manager.py" -ItemType File -Force
+
+New-Item -Path "ui/conflict_dialog.py" -ItemType File -Force
+
+
+Regla Arquitectónica Importante
+Todos los handlers deben implementar la misma interfaz.
+Tu contrato real ahora es:
+Handler:
+    can_handle(path)
+    load(path)
+Mientras todos respeten eso:
+
+El PreviewManager nunca se rompe.    

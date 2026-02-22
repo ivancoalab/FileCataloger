@@ -1,0 +1,44 @@
+
+We are building a modular File Cataloger application in Python using PySide6 (Qt).
+
+Architecture principles:
+- Clean separation of UI, application, infrastructure.
+- Small functions.
+- No tight coupling.
+- Console logging only.
+- JSON config.
+- JSON move history (currently in-memory only).
+- Preview system using handler registry pattern.
+- Each handler has: can_handle(path), load(path).
+- Fallback Hex handler exists.
+- ZIP handler implemented.
+- Media handler implemented using QMediaPlayer.
+- FileMover encapsulates shutil.move.
+- Undo uses MoveHistory (dict structure { "from": ..., "to": ... }).
+- UI split panel: left file list, right preview.
+- Directory label fixed above splitter.
+- Keyboard navigation implemented.
+- F6 moves file.
+- Ctrl+Z triggers undo.
+- Conflict resolver dialog exists.
+
+Current status:
+- Everything working.
+- MoveHistory currently in-memory only.
+- Architecture stable.
+- We want to continue expanding features cleanly.
+
+Continue from this architecture without breaking modularity.
+
+
+application/
+infrastructure/
+ui/
+
+file_mover.py
+
+move_history.py
+
+preview_manager.py
+
+main_window.py
