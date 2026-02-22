@@ -1,29 +1,33 @@
-import os
-from PySide6.QtWidgets import QLabel
-from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel, QSizePolicy
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 
-from core.interfaces.preview_handler import IPreviewHandler
 
-
-class ImagePreviewHandler(IPreviewHandler):
-
-    SUPPORTED = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"}
+class ImagePreviewHandler:
 
     def can_handle(self, file_path: str) -> bool:
-        _, ext = os.path.splitext(file_path.lower())
-        return ext in self.SUPPORTED
+        return file_path.lower().endswith(
+            (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp")
+        )
 
     def load(self, file_path: str):
-        label = QLabel()
-        label.setAlignment(Qt.AlignCenter)
+        return ScalableImageLabel(file_path)
 
-        pixmap = QPixmap(file_path)
-        if pixmap.isNull():
-            label.setText("Failed to load image")
-            return label
 
-        label.setPixmap(
-            pixmap.scaled(800, 600, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        )
-        return label
+class ScalableImageLabel(QLabel):
+
+    def __init__(self, file_path):
+        super().__init__()
+        self._pixmap = QPixmap(file_path)
+
+        self.setAlignment(Qt.AlignCenter)
+        self.setMinimumSize(0, 0)  # FIX
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)  # FIX
+
+    def resizeEvent(self, event):
+        if not self._pixmap.isNull():
+            scaled = self._pixmap.scaled(
+                self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+            self.setPixmap(scaled)
+        super().resizeEvent(event)

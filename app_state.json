@@ -3,7 +3,12 @@
         "width": 1200,
         "height": 800,
         "x": 100,
-        "y": 100
+        "y": 100,
+        "geometry": "AdnQywADAAD///o3AAAAJv///vEAAAOS///6NwAAAEX///7xAAADkgAAAAEAAAAABkD///o3AAAARf///vEAAAOS",
+        "splitter_sizes": [
+            216,
+            972
+        ]
     },
     "splitter_position": [
         350,
@@ -11,7 +16,7 @@
     ],
     "settings": {
         "default_directory": "C:/",
-        "last_directory": "C:/temp\\source",
+        "last_directory": "C:/27 - NOV 2025\\Samsung S23 Ultra - SWAP Formating\\01 - Ivan Gallery\\From QuickShare",
         "max_history": 500
     },
     "move_history": [

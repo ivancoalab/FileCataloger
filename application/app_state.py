@@ -1,6 +1,7 @@
 import json
 import os
 from typing import Any, Dict
+import base64  # ADDED PHASE 8.3
 
 
 class AppState:
@@ -50,13 +51,27 @@ class AppState:
 
     # ---------- Window State ----------
 
+    # ---------- Window State ----------
+
     def get_window_state(self):
         return self._data.get("window", {})
 
-    def set_window_state(self, geometry, splitter_sizes):
-        self._data["window"]["geometry"] = geometry
+    def set_window_state(self, geometry_bytes, splitter_sizes):
+        geometry_b64 = base64.b64encode(geometry_bytes).decode("utf-8")
+
+        self._data["window"]["geometry"] = geometry_b64
         self._data["window"]["splitter_sizes"] = splitter_sizes
+
         self._save()
+
+    def get_geometry(self):
+        geometry_b64 = self._data["window"].get("geometry")
+        if not geometry_b64:
+            return None
+        return base64.b64decode(geometry_b64)
+
+    def get_splitter_sizes(self):
+        return self._data["window"].get("splitter_sizes")
 
     # ---------- Move History ----------
 

@@ -46,16 +46,25 @@ class MainWindow(QMainWindow):
         self.resize(1000, 600)
 
         self._model = FileListModel()
-        self._init_ui(start_directory)
+        self._init_ui()
+        # ADDED PHASE 8.3
+        geometry = self._app_state.get_geometry()
+        splitter_sizes = self._app_state.get_splitter_sizes()
+        if geometry:
+            self.restoreGeometry(geometry)
+        if splitter_sizes:
+            self._splitter.setSizes(splitter_sizes)
+
+        self._load_directory(start_directory)  # ADDED PHASE 8.2
 
     def set_preview_manager(self, manager):  # ADDED IN PHASE 4
         self._preview_manager = manager
 
-    def _init_ui(self, start_directory):
+    def _init_ui(self):
         main_widget = QWidget()
         main_layout = QVBoxLayout()
 
-        # ===== PATH BAR =====  # UPDATED IN THIS ITERATION
+        # ===== PATH BAR =====
         self._path_label = QLabel("No directory selected")
         self._path_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._path_label.setFixedHeight(28)
@@ -69,13 +78,11 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self._path_label)
 
         # ===== SPLITTER =====
-        # splitter = QSplitter(Qt.Horizontal)
-        self._splitter = QSplitter(Qt.Horizontal)  # UPDATED IN THIS ITERATION
+        self._splitter = QSplitter(Qt.Horizontal)
 
         self._list_view = QListView()
         self._list_view.setModel(self._model)
         self._list_view.doubleClicked.connect(self._on_item_double_click)
-        # self._list_view.clicked.connect(self._on_item_selected)  # ADDED IN PHASE 4
         self._list_view.selectionModel().currentChanged.connect(
             self._on_current_changed
         )
@@ -84,17 +91,29 @@ class MainWindow(QMainWindow):
         self._list_view.setFocus()
         self._list_view.installEventFilter(self)
 
-        self._preview = QLabel("Preview Area")
-        self._preview.setAlignment(Qt.AlignCenter)
+        # ===== PREVIEW CONTAINER (FIX PHASE 8.3) =====
+        self._preview_container = QWidget()
+        self._preview_layout = QVBoxLayout()
+        self._preview_layout.setContentsMargins(0, 0, 0, 0)
 
-        # splitter.addWidget(self._list_view)
-        # splitter.addWidget(self._preview)
-        # splitter.setStretchFactor(1, 1)
+        # self._preview = QLabel("Preview Area")
+        # self._preview.setAlignment(Qt.AlignCenter)
+        # self._preview_layout.addWidget(self._preview)
+
+        # Placeholder only (no metadata yet)
+        self._content_widget = QLabel("Preview Area")
+        self._content_widget.setAlignment(Qt.AlignCenter)
+        self._preview_layout.addWidget(self._content_widget)
+
+        self._preview_container.setLayout(self._preview_layout)
 
         self._splitter.addWidget(self._list_view)
-        self._splitter.addWidget(self._preview)
-        self._splitter.setStretchFactor(0, 1)
-        self._splitter.setStretchFactor(1, 2)
+        self._splitter.addWidget(self._preview_container)
+        # self._splitter.addWidget(self._preview)
+
+        self._splitter.setStretchFactor(0, 0)
+        self._splitter.setStretchFactor(1, 1)
+        self._splitter.setChildrenCollapsible(False)  # ADDED FIX
 
         # ===== BOTTOM BAR =====
         bottom_bar = QHBoxLayout()
@@ -109,20 +128,16 @@ class MainWindow(QMainWindow):
 
         destination_layout = self._create_destination_panel()  # ADDED PHASE 7
 
-        # main_layout.addWidget(splitter)
         main_layout.addWidget(self._splitter)
         main_layout.addLayout(bottom_bar)
         main_layout.addLayout(destination_layout)  # ADDED PHASE 7
 
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
-        self._load_directory(start_directory)  # ADDED PHASE 8.2
 
     def _open_folder(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Folder")
         if directory:
-            # files = self._explorer.get_files(directory)
-            # self._model.set_files(files)
             self._load_directory(directory)
 
     def _load_directory(self, directory: str):  # ADDED IN PHASE 3
@@ -244,7 +259,28 @@ class MainWindow(QMainWindow):
     #    self._splitter.insertWidget(index, new_widget)
     #    self._preview = new_widget
 
-    def _replace_preview_widget(self, new_widget, path: str):  # UPDATED PHASE 5 FIX
+    def _replace_preview_widget(self, new_widget, path: str):
+        # Remove old content
+        if self._content_widget is not None:
+            self._preview_layout.removeWidget(self._content_widget)
+            self._content_widget.deleteLater()
+
+        # Remove old metadata if exists
+        if hasattr(self, "_metadata_widget") and self._metadata_widget:
+            self._preview_layout.removeWidget(self._metadata_widget)
+            self._metadata_widget.deleteLater()
+
+        from infrastructure.preview.metadata_widget import MetadataWidget
+
+        # Set new content
+        self._content_widget = new_widget
+        self._preview_layout.insertWidget(0, self._content_widget)
+
+        # Add metadata below
+        self._metadata_widget = MetadataWidget(path)
+        self._preview_layout.addWidget(self._metadata_widget)
+
+    def _replace_preview_widget_old(self, new_widget, path: str):  # UPDATED PHASE 5 FIX
         index = self._splitter.indexOf(self._preview)
         if index == -1:
             return
@@ -351,3 +387,10 @@ class MainWindow(QMainWindow):
             self._reload_current_directory(record)
         else:
             print("Nothing to undo or undo failed.")
+
+    def closeEvent(self, event):  # ADDED PHASE 8.3
+        geometry = self.saveGeometry()
+        splitter_sizes = self._splitter.sizes()
+
+        self._app_state.set_window_state(geometry, splitter_sizes)
+        super().closeEvent(event)
