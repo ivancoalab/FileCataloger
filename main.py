@@ -14,6 +14,10 @@ from infrastructure.config_manager import ConfigManager  # ADDED PHASE 6
 from application.move_history import MoveHistory  # ADDED PHASE 6
 from application.file_mover import FileMover  # ADDED PHASE 6
 
+from application.app_state import AppState  # ADDED PHASE 8
+
+# from application.move_history import MoveHistory  # ADDED PHASE 8
+
 from ui.main_window import MainWindow
 
 
@@ -32,8 +36,10 @@ def main():
     )
 
     config = ConfigManager()  # ADDED PHASE 6
-    history = MoveHistory()  # ADDED PHASE 6
-    mover = FileMover(history)  # ADDED PHASE 6
+    # history = MoveHistory()  # ADDED PHASE 6
+    app_state = AppState()  # ADDED PHASE 8
+    move_history = MoveHistory(app_state)  # ADDED PHASE 8
+    mover = FileMover(move_history)  # ADDED PHASE 6
 
     # window = MainWindow(explorer)
     window = MainWindow(explorer, mover, config)  # UPDATED PHASE 6
