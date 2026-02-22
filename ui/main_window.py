@@ -24,13 +24,21 @@ from ui.conflict_dialog import ask_conflict_resolution
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, explorer: FileExplorer, file_mover, config_manager):
+    def __init__(
+        self,
+        explorer: FileExplorer,
+        file_mover,
+        config_manager,
+        app_state,
+        start_directory,
+    ):
         super().__init__()
         self._explorer = explorer
         self._file_mover = file_mover  # ADDED PHASE 6
         self._config = config_manager  # ADDED PHASE 6
         self._preview_manager = None  # ADDED IN PHASE 4
         self._destination_buttons = []
+        self._app_state = app_state  # ADDED PHASE 8.2
         undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         undo_shortcut.activated.connect(self._undo_last_move)
 
@@ -38,12 +46,12 @@ class MainWindow(QMainWindow):
         self.resize(1000, 600)
 
         self._model = FileListModel()
-        self._init_ui()
+        self._init_ui(start_directory)
 
     def set_preview_manager(self, manager):  # ADDED IN PHASE 4
         self._preview_manager = manager
 
-    def _init_ui(self):
+    def _init_ui(self, start_directory):
         main_widget = QWidget()
         main_layout = QVBoxLayout()
 
@@ -108,6 +116,7 @@ class MainWindow(QMainWindow):
 
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
+        self._load_directory(start_directory)  # ADDED PHASE 8.2
 
     def _open_folder(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -118,6 +127,7 @@ class MainWindow(QMainWindow):
 
     def _load_directory(self, directory: str):  # ADDED IN PHASE 3
         self._current_directory = directory  # ADDED PHASE 7
+        self._app_state.set_setting("last_directory", directory)  # ADDED PHASE 8.2
         items = self._explorer.open_directory(directory)
         self._model.set_items(items)
         # self._path_label.setText(directory)

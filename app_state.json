@@ -1,6 +1,4 @@
 {
-    "last_directory": "C:/temp",
-    "default_directory": "C:/",
     "window": {
         "width": 1200,
         "height": 800,
@@ -12,6 +10,8 @@
         850
     ],
     "settings": {
+        "default_directory": "C:/",
+        "last_directory": "C:/temp\\source",
         "max_history": 500
     },
     "move_history": [
@@ -25,7 +25,7 @@
         },
         {
             "from": "C:/temp\\source\\IMG-20231217-WA0102.jpg",
-            "to": "C:/TEMP/Docs\\IMG-20231217-WA0102.jpg"
+            "to": "C:/TEMP/Images\\IMG-20231217-WA0102.jpg"
         }
     ]
 }
