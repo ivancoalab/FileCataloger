@@ -1,0 +1,265 @@
+Crear entorno:
+python -m venv venv
+Activar Entorno:
+venv\Scripts\activate
+Me dió error asi que abri Power Shel y escribi:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+ya dejó activar.
+
+Siguiente:
+pip install PySide6
+
+Script para crear la estructura del poroyecto:
+
+# Crear carpetas y archivos de Core
+New-Item -Path "core/interfaces/file_service.py", "core/interfaces/config_service.py" -ItemType File -Force
+New-Item -Path "core/models/file_metadata.py" -ItemType File -Force
+New-Item -Path "core/models/filesystem_item.py" -ItemType File -Force
+# Crear carpeta y archivo de Application
+New-Item -Path "application/file_explorer.py" -ItemType File -Force
+# Crear carpeta y archivos de Infrastructure
+New-Item -Path "infrastructure/filesystem_service.py", "infrastructure/json_config_service.py" -ItemType File -Force
+# Crear carpeta y archivos de UI
+New-Item -Path "ui/main_window.py", "ui/file_list_model.py" -ItemType File -Force
+# Crear el archivo principal en la raíz
+New-Item -Path "main.py" -ItemType File
+
+
+Siguiente paso, copiar y pegar el codigo.
+
+Despues de la 3ra iteracion esta funcionando bien todo, agregamos nuevas clases para
+la fase 4:
+
+New-Item -Path "core/interfaces/preview_handler.py" -ItemType File -Force
+New-Item -Path "application/preview_manager.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/image_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/text_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/hex_handler.py" -ItemType File -Force
+
+    
+    
+New-Item -Path "infrastructure/preview_handlers/media_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/pdf_handler.py" -ItemType File -Force
+New-Item -Path "infrastructure/preview_handlers/zip_handler.py" -ItemType File -Force
+
+New-Item -Path "infrastructure/preview/metadata_widget.py" -ItemType File -Force
+
+New-Item -Path "application/file_mover.py" -ItemType File -Force
+New-Item -Path "application/move_history.py" -ItemType File -Force
+New-Item -Path "infrastructure/config_manager.py" -ItemType File -Force
+
+New-Item -Path "ui/conflict_dialog.py" -ItemType File -Force
+
+
+Regla Arquitectónica Importante
+Todos los handlers deben implementar la misma interfaz.
+Tu contrato real ahora es:
+Handler:
+    can_handle(path)
+    load(path)
+Mientras todos respeten eso:
+
+El PreviewManager nunca se rompe.    
+
+
+Este es el main.py:
+
+
+def main():
+    app = QApplication(sys.argv)
+
+    file_service = LocalFileSystemService()
+    explorer = FileExplorer(file_service)
+
+    preview_manager = PreviewManager(
+        [
+            ImagePreviewHandler(),
+            TextPreviewHandler(),
+            HexPreviewHandler(),  # fallback last
+        ]
+    )
+
+    config = ConfigManager()  # ADDED PHASE 6
+    # history = MoveHistory()  # ADDED PHASE 6
+    app_state = AppState()  # ADDED PHASE 8
+    # ADDED PHASE 8.2
+    last_directory = app_state.get_setting("last_directory")
+    default_directory = app_state.get_setting("default_directory")
+
+    if last_directory and os.path.exists(last_directory):
+        start_directory = last_directory
+    elif default_directory and os.path.exists(default_directory):
+        start_directory = default_directory
+    else:
+        start_directory = os.getcwd()
+
+    move_history = MoveHistory(app_state)  # ADDED PHASE 8
+    mover = FileMover(move_history)  # ADDED PHASE 6
+
+    # window = MainWindow(explorer)
+    # window = MainWindow(explorer, mover, config)  # UPDATED PHASE 6
+    window = MainWindow(
+        explorer, mover, config, app_state, start_directory, preview_manager
+    )  # UPDATED PHASE 8.2
+    # window.set_preview_manager(preview_manager)  # ADDED IN PHASE 4
+    window.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
+
+-----------------------------------------------------------------------
+Este es el main_window.py, desde el init hasta el init_ui
+
+class MainWindow(QMainWindow):
+
+    def __init__(
+        self,
+        explorer: FileExplorer,
+        file_mover,
+        config_manager,
+        app_state,
+        start_directory,
+        preview_manager,
+    ):
+        super().__init__()
+        self._explorer = explorer
+        self._file_mover = file_mover  # ADDED PHASE 6
+        self._config = config_manager  # ADDED PHASE 6
+        # self._preview_manager = None  # ADDED IN PHASE 4
+        self._preview_manager = preview_manager  # ADDED IN PHASE 4
+        self._destination_buttons = []
+        self._app_state = app_state  # ADDED PHASE 8.2
+        undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        undo_shortcut.activated.connect(self._undo_last_move)
+
+        self.setWindowTitle("File Cataloger")
+        self.resize(1000, 600)
+
+        self._model = FileListModel()
+        self._init_ui()
+        # ADDED PHASE 8.3
+        geometry = self._app_state.get_geometry()
+        splitter_sizes = self._app_state.get_splitter_sizes()
+        if geometry:
+            self.restoreGeometry(geometry)
+        if splitter_sizes:
+            self._splitter.setSizes(splitter_sizes)
+
+        self._load_directory(start_directory)  # ADDED PHASE 8.2
+
+    def set_preview_manager(self, manager):  # ADDED IN PHASE 4
+        self._preview_manager = manager
+
+    def _init_ui(self):
+        main_widget = QWidget()
+        main_layout = QVBoxLayout()
+
+        # ===== PATH BAR =====
+        self._path_label = QLabel("No directory selected")
+        self._path_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._path_label.setFixedHeight(28)
+        self._path_label.setStyleSheet(
+            """
+            background-color: #2b2b2b;
+            color: white;
+            padding-left: 8px;
+        """
+        )
+        main_layout.addWidget(self._path_label)
+
+        # ===== SPLITTER =====
+        self._splitter = QSplitter(Qt.Horizontal)
+
+        self._list_view = QListView()
+        self._list_view.setModel(self._model)
+        self._list_view.doubleClicked.connect(self._on_item_double_click)
+        self._list_view.selectionModel().currentChanged.connect(
+            self._on_current_changed
+        )
+
+        # Keyboard navigation  # ADDED IN PHASE 3
+        self._list_view.setFocus()
+        self._list_view.installEventFilter(self)
+
+        # ===== PREVIEW CONTAINER (FIX PHASE 8.3) =====
+        self._preview_container = QWidget()
+        self._preview_layout = QVBoxLayout()
+        self._preview_layout.setContentsMargins(0, 0, 0, 0)
+
+        # self._preview = QLabel("Preview Area")
+        # self._preview.setAlignment(Qt.AlignCenter)
+        # self._preview_layout.addWidget(self._preview)
+
+        # Placeholder only (no metadata yet)
+        self._content_widget = QLabel("Preview Area")
+        self._content_widget.setAlignment(Qt.AlignCenter)
+        self._preview_layout.addWidget(self._content_widget)
+
+        self._preview_container.setLayout(self._preview_layout)
+
+        self._splitter.addWidget(self._list_view)
+        self._splitter.addWidget(self._preview_container)
+        # self._splitter.addWidget(self._preview)
+
+        self._splitter.setStretchFactor(0, 0)
+        self._splitter.setStretchFactor(1, 1)
+        self._splitter.setChildrenCollapsible(False)  # ADDED FIX
+
+        # ===== BOTTOM BAR =====
+        bottom_bar = QHBoxLayout()
+        open_button = QPushButton("Open Folder")
+        open_button.clicked.connect(self._open_folder)
+
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self._go_back)
+
+        bottom_bar.addWidget(open_button)
+        bottom_bar.addWidget(back_button)
+
+        destination_layout = self._create_destination_panel()  # ADDED PHASE 7
+
+        main_layout.addWidget(self._splitter)
+        main_layout.addLayout(bottom_bar)
+        main_layout.addLayout(destination_layout)  # ADDED PHASE 7
+
+        main_widget.setLayout(main_layout)
+        self.setCentralWidget(main_widget)
+
+
+Primero me marcó este error:
+destinations = self._config.get_destination_folders()        
+pero lo corregi cambiandolo a
+destinations = self._config.get_destinations()        
+Que es como esta definido en el config_manage.py
+
+Ahora me marca este otro error en _populate_destinations
+
+ line 168, in _populate_destinations
+    button = QPushButton(name)
+TypeError: 'PySide6.QtWidgets.QPushButton.__init__' called with wrong argument types:
+  PySide6.QtWidgets.QPushButton.__init__(dict)
+Supported signatures:
+  PySide6.QtWidgets.QPushButton.__init__(text: str, /, parent: PySide6.QtWidgets.QWidget | None = None, *, autoDefault: bool | None = None, default: bool | None = None, flat: bool | None = None)
+  PySide6.QtWidgets.QPushButton.__init__(icon: PySide6.QtGui.QIcon | PySide6.QtGui.QPixmap, text: str, /, parent: PySide6.QtWidgets.QWidget | None = None, *, autoDefault: bool | None = None, default: bool | None = None, flat: bool | None = None)
+  PySide6.QtWidgets.QPushButton.__init__(parent: PySide6.QtWidgets.QWidget | None = None, *, autoDefault: bool | None = None, default: bool | None = None, flat: bool | None = None)
+
+config.json
+{
+  "destination_folders": [
+        {
+        "name": "Amazon",
+        "path": "C:/27 - NOV 2025/Wap Organized/Amazoneando",
+        "hotkey": "0"
+        }, 
+        {
+        "name": "Random",
+        "path": "C:/27 - NOV 2025/Wap Organized/Fotos Random",
+        "hotkey": "1"
+        }, 
+    ],               
+  "deleted_folder": "C:/TEMP/Deleted",
+  "conflict_policy": null
+}

@@ -4,20 +4,27 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
+    QScrollArea,
     QListView,
     QLabel,
     QPushButton,
     QFileDialog,
     QSplitter,
     QSizePolicy,
+    QApplication,
+    QLineEdit,
 )
 from PySide6.QtCore import Qt, QEvent  # UPDATED IN PHASE 3
 from PySide6.QtGui import QFontMetrics  # ADDED IN THIS ITERATION
 from PySide6.QtGui import QShortcut, QKeySequence
 
+
 from application.file_explorer import FileExplorer
 from ui.file_list_model import FileListModel
+from ui.widgets.destination_widget import DestinationWidget
 from infrastructure.preview.metadata_widget import MetadataWidget  # ADD IMPORT PHASE 5
+
 
 from ui.conflict_dialog import ask_conflict_resolution
 
@@ -31,14 +38,17 @@ class MainWindow(QMainWindow):
         config_manager,
         app_state,
         start_directory,
+        preview_manager,
     ):
         super().__init__()
         self._explorer = explorer
         self._file_mover = file_mover  # ADDED PHASE 6
         self._config = config_manager  # ADDED PHASE 6
-        self._preview_manager = None  # ADDED IN PHASE 4
+        # self._preview_manager = None  # ADDED IN PHASE 4
+        self._preview_manager = preview_manager  # ADDED IN PHASE 4
         self._destination_buttons = []
         self._app_state = app_state  # ADDED PHASE 8.2
+        # self._hotkey_map = {}
         undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         undo_shortcut.activated.connect(self._undo_last_move)
 
@@ -61,8 +71,33 @@ class MainWindow(QMainWindow):
         self._preview_manager = manager
 
     def _init_ui(self):
-        main_widget = QWidget()
-        main_layout = QVBoxLayout()
+        # ===== CENTRAL CONTAINER =====
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        self._main_layout = QVBoxLayout()
+        self._main_layout.setContentsMargins(5, 5, 5, 5)
+        central_widget.setLayout(self._main_layout)
+
+        # ===== TOOLBAR (TOP) =====
+        self._create_toolbar()
+
+        # ===== DESTINATIONS CONTAINER (Single Row Scrollable) =====
+        self._destinations_scroll = QScrollArea()
+        self._destinations_scroll.setWidgetResizable(True)
+        self._destinations_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._destinations_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._destinations_scroll.setFixedHeight(70)
+
+        self._destinations_widget = QWidget()
+        self._destinations_layout = QHBoxLayout()
+        self._destinations_layout.setContentsMargins(5, 5, 5, 5)
+        self._destinations_layout.setSpacing(8)
+
+        self._destinations_widget.setLayout(self._destinations_layout)
+        self._destinations_scroll.setWidget(self._destinations_widget)
+
+        self._main_layout.addWidget(self._destinations_scroll)
 
         # ===== PATH BAR =====
         self._path_label = QLabel("No directory selected")
@@ -75,10 +110,15 @@ class MainWindow(QMainWindow):
             padding-left: 8px;
         """
         )
-        main_layout.addWidget(self._path_label)
+        self._main_layout.addWidget(self._path_label)
 
         # ===== SPLITTER =====
         self._splitter = QSplitter(Qt.Horizontal)
+
+        # ===== LEFT PANEL (List + Stats Line) =====
+        self._left_panel = QWidget()
+        self._left_layout = QVBoxLayout()
+        self._left_layout.setContentsMargins(0, 0, 0, 0)
 
         self._list_view = QListView()
         self._list_view.setModel(self._model)
@@ -87,53 +127,114 @@ class MainWindow(QMainWindow):
             self._on_current_changed
         )
 
-        # Keyboard navigation  # ADDED IN PHASE 3
         self._list_view.setFocus()
-        self._list_view.installEventFilter(self)
+        # self._list_view.installEventFilter(self)
+        # self.installEventFilter(self)
+        QApplication.instance().installEventFilter(self)
 
-        # ===== PREVIEW CONTAINER (FIX PHASE 8.3) =====
+        self._folder_stats_label = QLabel("0 files | 0 MB")
+        self._folder_stats_label.setFixedHeight(22)
+        self._folder_stats_label.setStyleSheet(
+            "background-color: #1e1e1e; color: #cccccc; padding-left: 5px;"
+        )
+
+        self._left_layout.addWidget(self._list_view)
+        self._left_layout.addWidget(self._folder_stats_label)
+        self._left_panel.setLayout(self._left_layout)
+
+        # ===== PREVIEW CONTAINER (unchanged logic) =====
         self._preview_container = QWidget()
         self._preview_layout = QVBoxLayout()
         self._preview_layout.setContentsMargins(0, 0, 0, 0)
 
-        # self._preview = QLabel("Preview Area")
-        # self._preview.setAlignment(Qt.AlignCenter)
-        # self._preview_layout.addWidget(self._preview)
-
-        # Placeholder only (no metadata yet)
         self._content_widget = QLabel("Preview Area")
         self._content_widget.setAlignment(Qt.AlignCenter)
         self._preview_layout.addWidget(self._content_widget)
 
         self._preview_container.setLayout(self._preview_layout)
 
-        self._splitter.addWidget(self._list_view)
+        # ===== ADD TO SPLITTER =====
+        self._splitter.addWidget(self._left_panel)
         self._splitter.addWidget(self._preview_container)
-        # self._splitter.addWidget(self._preview)
 
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
-        self._splitter.setChildrenCollapsible(False)  # ADDED FIX
+        self._splitter.setChildrenCollapsible(False)
 
-        # ===== BOTTOM BAR =====
-        bottom_bar = QHBoxLayout()
-        open_button = QPushButton("Open Folder")
-        open_button.clicked.connect(self._open_folder)
+        self._main_layout.addWidget(self._splitter)
 
-        back_button = QPushButton("Back")
-        back_button.clicked.connect(self._go_back)
+        # ===== STATUS BAR =====
+        self.statusBar().showMessage("Ready")
 
-        bottom_bar.addWidget(open_button)
-        bottom_bar.addWidget(back_button)
+        # ===== POPULATE DESTINATIONS (temporary buttons for now) =====
+        self._populate_destinations()
 
-        destination_layout = self._create_destination_panel()  # ADDED PHASE 7
+    def _create_toolbar(self):
+        toolbar = self.addToolBar("Main Toolbar")
+        toolbar.setMovable(False)
 
-        main_layout.addWidget(self._splitter)
-        main_layout.addLayout(bottom_bar)
-        main_layout.addLayout(destination_layout)  # ADDED PHASE 7
+        self._open_action = toolbar.addAction("Open Folder")
+        self._back_action = toolbar.addAction("Back")
+        toolbar.addSeparator()
+        self._toggle_mode_action = toolbar.addAction("Text Mode")
 
-        main_widget.setLayout(main_layout)
-        self.setCentralWidget(main_widget)
+        self._open_action.triggered.connect(self._open_folder)
+        self._back_action.triggered.connect(self._go_back)
+        self._toggle_mode_action.triggered.connect(self._toggle_view_mode)
+
+    def _populate_destinations(self):
+        self._destination_widgets = {}
+        # self._hotkey_map.clear()
+        # Limpiar layout
+        while self._destinations_layout.count():
+            item = self._destinations_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        destinations = self._config.get_destinations()
+        if not isinstance(destinations, list):
+            return
+        for dest in destinations:
+            name = dest.get("name", "Unnamed")
+            path = dest.get("path")
+            hotkey = dest.get("hotkey")
+            # buttonlabel = str(f"[{hotkey}] {name}")
+            widget = DestinationWidget(name, path, hotkey)
+            widget.clicked.connect(lambda p=path: self._activate_destination_by_path(p))
+            self._destination_widgets[path] = widget
+            self._destinations_layout.addWidget(widget)
+            # widget = DestinationWidget(name, path, hotkey)
+            # widget.clicked.connect(self._handle_destination_click)
+            # self._destinations_layout.addWidget(widget)
+            # if hotkey:
+            #     self._register_hotkey(hotkey, widget)
+
+        self._destinations_layout.addStretch()
+
+    def _activate_destination_by_path(self, path: str):
+        widget = self._destination_widgets.get(path)
+        if widget:
+            widget._blink()
+        self._move_current_file(path)
+
+    # def _register_hotkey(self, hotkey: str, widget):
+    #     if hotkey in self._hotkey_map:
+    #         print(f"Hotkey duplicada: {hotkey}")
+    #         return
+    #     shortcut = QShortcut(QKeySequence(hotkey), self)
+    #     shortcut.activated.connect(lambda w=widget: self._activate_destination(w))
+    #     self._hotkey_map[hotkey] = widget
+
+    # def _activate_destination(self, widget):
+    #     # Activar blink visual
+    #     widget._blink()
+    #     # Emitir como si fuera click real
+    #     self._handle_destination_click(widget._path)
+
+    def _handle_destination_click(self, path: str):
+        print("Destino seleccionado:", path)
+
+    def _toggle_view_mode(self):
+        self.statusBar().showMessage("Toggle view mode (not implemented yet)")
 
     def _open_folder(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -187,35 +288,31 @@ class MainWindow(QMainWindow):
 
     # Keyboard event handling  # ADDED IN PHASE 3
     def eventFilter(self, source, event):
-        if source is self._list_view and event.type() == QEvent.KeyPress:
-            # HOTKEY DESTINATIONS
+        if event.type() == QEvent.KeyPress:
+            # Evitar interferir si en futuro agregas QLineEdit
+            if isinstance(QApplication.focusWidget(), QLineEdit):
+                return super().eventFilter(source, event)
             destinations = self._config.get_destinations()
             key = event.key()
-
-            if key == Qt.Key_Return or key == Qt.Key_Enter:
+            if key in (Qt.Key_Return, Qt.Key_Enter):
                 self._handle_enter()
                 return True
-
             if key == Qt.Key_Backspace:
                 self._go_back()
                 return True
-            # if key == Qt.Key_F6:  # TEMP TEST KEY PHASE 6
-            #    test_folder = self._config.get_deleted_folder()
-            #    if test_folder:
-            #        self._move_current_file(test_folder)
-            #    return True
-            for dest in destinations:
-                if event.text() == dest["hotkey"]:
-                    self._move_current_file(dest["path"])
-                    return True
-
-            # DELETE KEY → deleted folder
             if key == Qt.Key_Delete:
                 deleted = self._config.get_deleted_folder()
                 if deleted:
                     self._move_current_file(deleted)
                 return True
-
+            # HOTKEY DESTINATIONS
+            char = event.text()
+            if char:
+                for dest in destinations:
+                    hotkey = dest.get("hotkey")
+                    if hotkey and char == hotkey:
+                        self._activate_destination_by_path(dest["path"])
+                        return True
         return super().eventFilter(source, event)
 
     def _handle_enter(self):  # ADDED IN PHASE 3
@@ -241,10 +338,8 @@ class MainWindow(QMainWindow):
 
     def _on_item_selected(self, index):  # UPDATED PHASE 5 FIX
         item = self._model.get_item(index)
-
         if item.is_directory:
             return
-
         widget = self._preview_manager.get_preview(item.path)
         self._replace_preview_widget(widget, item.path)
 
@@ -348,18 +443,18 @@ class MainWindow(QMainWindow):
         self._list_view.setCurrentIndex(new_index)
         # self._on_item_selected(new_index)  # ADDED PHASE 7
 
-    def _create_destination_panel(self):  # ADDED PHASE 7
-        layout = QHBoxLayout()
+    # def _create_destination_panel(self):  # ADDED PHASE 7
+    #    layout = QHBoxLayout()
 
-        destinations = self._config.get_destinations()
+    #    destinations = self._config.get_destinations()
 
-        for dest in destinations:
-            button = QPushButton(f"[{dest['hotkey']}] {dest['name']}")
-            button.clicked.connect(lambda _, p=dest["path"]: self._move_current_file(p))
-            layout.addWidget(button)
-            self._destination_buttons.append(button)
+    #    for dest in destinations:
+    #        button = QPushButton(f"[{dest['hotkey']}] {dest['name']}")
+    #        button.clicked.connect(lambda _, p=dest["path"]: self._move_current_file(p))
+    #        layout.addWidget(button)
+    #        self._destination_buttons.append(button)
 
-        return layout
+    #    return layout
 
     def _select_item_by_name(self, name: str):  # UPDATED PHASE 7
         model = self._list_view.model()

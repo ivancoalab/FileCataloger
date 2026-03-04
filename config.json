@@ -1,19 +1,59 @@
 {
   "destination_folders": [
+     {
+      "name": "Amazon",
+      "path": "C:/27 - NOV 2025/Wap Organized/Amazoneando",
+      "hotkey": "0"
+    },
     {
-      "name": "Images",
-      "path": "C:/TEMP/Images",
+      "name": "Random",
+      "path": "C:/27 - NOV 2025/Wap Organized/Fotos Random",
       "hotkey": "1"
     },
     {
-      "name": "Docs",
-      "path": "C:/TEMP/Docs",
+      "name": "Fam",
+      "path": "C:/27 - NOV 2025/Wap Organized/Family and ME",
       "hotkey": "2"
     },
     {
-      "name": "Other",
-      "path": "C:/TEMP/other",
+      "name": "Conocidos",
+      "path": "C:/27 - NOV 2025/Wap Organized/Conocidos",
       "hotkey": "3"
+    },
+    {
+      "name": "Bank",
+      "path": "C:/27 - NOV 2025/Wap Organized/SceenshotsBancos",
+      "hotkey": "4"
+    },
+    {
+      "name": "Tickets",
+      "path": "C:/27 - NOV 2025/Wap Organized/Tickets y Recibos",
+      "hotkey": "5"
+    },
+    {
+      "name": "ViajesConcerts",
+      "path": "C:/27 - NOV 2025/Wap Organized/Viajes y Conciertos",
+      "hotkey": "6"
+    },
+    {
+      "name": "DatosNotes",
+      "path": "C:/27 - NOV 2025/Wap Organized/Datos y Notas",
+      "hotkey": "7"
+    },
+    {
+      "name": "Docs",
+      "path": "C:/27 - NOV 2025/Wap Organized/Documents",
+      "hotkey": "8"
+    },
+    {
+      "name": "Warning",
+      "path": "C:/27 - NOV 2025/Wap Organized/The Warning",
+      "hotkey": "9"
+    },
+    {
+      "name": "Memes",
+      "path": "C:/27 - NOV 2025/Wap Organized/MEMES",
+      "hotkey": "/"
     }
   ],
   "deleted_folder": "C:/TEMP/Deleted",

@@ -49,11 +49,10 @@ def main():
     # window = MainWindow(explorer)
     # window = MainWindow(explorer, mover, config)  # UPDATED PHASE 6
     window = MainWindow(
-        explorer, mover, config, app_state, start_directory
+        explorer, mover, config, app_state, start_directory, preview_manager
     )  # UPDATED PHASE 8.2
-    window.set_preview_manager(preview_manager)  # ADDED IN PHASE 4
+    # window.set_preview_manager(preview_manager)  # ADDED IN PHASE 4
     window.show()
-
     sys.exit(app.exec())
 
 

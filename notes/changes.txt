@@ -1,0 +1,55 @@
+3/Mar/2026
+
+La aplicacion ya esta siendo usda y funciona bastante bien, sin embargo con el uso surgieron
+nuevas necesidades de diseño y cambios, asi que deseo que me ayudes a hacer los siguientes 
+cambios y nueva funcionalidad, las listo en orden.
+
+1.- Los botones "Open Folder" y "Back" actualmente estan abajo.
+Deseo moverlos a la parte de arriba, justo arriba que sea como una barra de herramientas, que se extienda
+a lo largo de la pantalla arriba tanto del listador de archivos como del viewer, es decir que no forme
+parte del splitter sino que este afuera de ambos, que el ancho de los botones sea de unos
+15 caracteres si el texto se pasa que haga wrap hacia abajo.
+2.- los botones de las carpetas que esten justo debajo de esa barra de herramientas.
+3.- Poder cambiar la ruta de la carpeta asignada al boton dandole click al boton y se
+abra un seleccionador de folder asi como el open folder y seleccionar un folder y este
+quede configurado al boton y tambien se guarde en el config.json{"destination_folders":}
+
+4.-Debajo de cada boton, agregar una imagen tipo preview cuadrado, de unos 10 x 10 caracteres
+de dimension, que funcionara de la siguiente manera.
+por default aparecerá gris. en cuanto un archivo se mueva a la carpeta, se generara
+un thumbnail (en caso de que no consuma muchos recursos o tarde mucho, 
+si tarda mucho buscar una mejor alternativa) y ese thumbnail se presente en el preview, de
+debajo del boton, esto par poder ver rapidamente el ultim archivo movido a esa carpeta
+si el archivo es un texto o pdf, poder tomar un screenshot de lo que se ve en el visor en esos momentos
+(nuevamente en caso de no consumir muchos recurso, o sea tardado),
+en caso de esto ultimo ser muy complicado entonces que se ponga los ultimos 10 caracteres
+del nombre y extension del archivo movido.
+adicional a todo esto que el boton cambie de color a "verde" (blink si se puede) para indicar 
+que se movio un archivo, y eso ocurra durante unos 10 segundos y si no hay nuevo movimiento
+se regrese a su color por default.
+Si antes de los 10 segundos se mueve otro archivo a otra carpeta, que el anterior boton
+deje de blinkear y regrese su color a gris original y el nuevo boton de la carpeta con
+archivo recien movido se resalte.
+
+5.- Por default cuando un archivo no se identifica se abre en el visor hexadecimal,
+quiero cambiar eso a que por default cuando un archivo no se identifique se abra en
+modo texto y tener un boton arriba que pueda cambiar de modo texto a modo exadecimal,
+o sea poder cambiar el default de modo texto a modo decimal y esto se recuerde en la
+configuracion, pero sea un boton mas en la barra de herramientas
+
+6.- El archivo selecionado en el listado de archivos por default usa un color gris bajito
+para resaltar, me gustaria cambiar a un colo azul para indicar resaltado
+y tambien esto lo pueda configurar desde el json.
+
+7.- Debajo del listado de archivos en su lado del splitter o sea del lado izquierdo, justo debajo ocupando
+solo una linea hasta el final, que me indique el total de archivos y si se puede
+el peso de la carpeta en MB o GB
+
+8.- Que mero hasta abajo de la pantalla, justo debajo de todo
+haya una barra de estado que indique lo ultimo que se hizo, algo asi como
+last action: "File A moved to Destination B"
+o
+last action: "File X restored to folder Y via Undo"
+o 
+last action: "Error trying to move file X, (detail of the error)"
+Etc.
